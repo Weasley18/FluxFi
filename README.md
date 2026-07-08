@@ -1,12 +1,12 @@
 # FluxFi
 
-> **AI-powered financial management platform for small businesses** — built with Claude AI, LangGraph, FastAPI, and React.
+> **AI-powered financial management platform for small businesses** — built with OpenAI, LangGraph, FastAPI, and React.
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
 [![LangGraph](https://img.shields.io/badge/LangGraph-ReAct_Agent-FF6B35)](https://langchain-ai.github.io/langgraph/)
-[![Claude](https://img.shields.io/badge/Claude-Opus_4.6-blueviolet)](https://anthropic.com)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai)](https://openai.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://docker.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql)](https://postgresql.org)
 
@@ -24,13 +24,14 @@ Upload your bank statement → AI extracts every transaction → ask questions i
 
 | Feature | Tech |
 |---|---|
-| **Bank PDF Parser** | `pdfplumber` + Claude Sonnet extracts transactions from any bank statement format |
-| **Conversational AI** | LangGraph ReAct agent with persistent memory — ask questions about your finances across sessions |
+| **Bank PDF Parser** | `pdfplumber` + OpenAI GPT-4o-mini extracts transactions from any bank statement format |
+| **Conversational AI** | LangGraph ReAct agent with persistent memory (`MemorySaver`) + OpenAI GPT-4o-mini |
 | **Cash Flow Forecast** | Facebook Prophet time-series model, auto-configured based on data availability |
-| **Anomaly Detection** | Claude identifies duplicate charges, unusual spikes, and suspicious patterns |
-| **AI Insights** | Real-time financial analysis — income trends, expense patterns, recommendations |
+| **Anomaly Detection** | OpenAI GPT-4o-mini identifies duplicate charges, unusual spikes, and suspicious patterns |
+| **AI Insights** | OpenAI GPT-4o-mini real-time financial analysis — income trends, expense patterns, recommendations |
 | **Budget Goals** | Set monthly category limits, track progress with visual indicators |
-| **Invoice Processing** | Upload invoices as PDFs/images, AI extracts vendor, amount, due date |
+| **Invoice Processing** | OCR (`pytesseract` + `pdf2image`) + OpenAI GPT-4o-mini extracts vendor, amount, due date, and line items |
+| **Gmail Integration** | Google OAuth2 flow + Celery background workers automatically poll and import invoice attachments |
 | **Multi-Currency** | USD, EUR, GBP, INR, AUD, CAD display with conversion |
 | **Report Export** | Download transactions as PDF or Excel |
 | **Scheduled Reports** | Monthly email reports via Celery beat + SMTP |
@@ -46,12 +47,12 @@ Upload your bank statement → AI extracts every transaction → ask questions i
 │   + Chart.js    │     │  ┌──────────────┐  ┌───────────────┐  │
 └─────────────────┘     │  │ LangGraph    │  │ PDF Parser    │  │
                         │  │ ReAct Agent  │  │ pdfplumber    │  │
-        Nginx           │  │ (3 tools)    │  │ + Claude      │  │
+        Nginx           │  │ (3 tools)    │  │ + OpenAI      │  │
       (reverse          │  └──────┬───────┘  └───────────────┘  │
         proxy)          │         │                               │
                         │  ┌──────▼───────┐  ┌───────────────┐  │
-                        │  │ Claude       │  │ Prophet       │  │
-                        │  │ Opus 4.6     │  │ Forecasting   │  │
+                        │  │ OpenAI       │  │ Prophet       │  │
+                        │  │ GPT-4o-mini  │  │ Forecasting   │  │
                         │  └──────────────┘  └───────────────┘  │
                         └────────────┬───────────────────────────┘
                                      │
@@ -71,7 +72,7 @@ Upload your bank statement → AI extracts every transaction → ask questions i
 The chat feature uses a full LangGraph graph with:
 - **MemorySaver** checkpointing — conversation history persists per user, per thread
 - **3 tools**: `search_transactions` (RAG), `get_financial_summary`, `list_invoices`
-- **System prompt** keeps Claude focused on financial context
+- **System prompt** keeps the agent focused on financial context
 - Conditional edges: agent decides whether to call tools or respond directly
 
 ```python
@@ -85,9 +86,9 @@ graph.add_edge("tools", "agent")
 
 ### PDF Transaction Extraction
 1. `pdfplumber.extract_tables()` — preserves column structure (Date | Description | Debit | Credit | Balance)
-2. Pipe-separated rows sent to Claude Sonnet with explicit parsing rules
-3. Fallback to `extract_text()` for image-based PDFs
-4. MD5 deduplication — re-uploading the same statement never creates duplicates
+2. Pipe-separated rows sent to OpenAI GPT-4o-mini with explicit parsing rules
+3. Fallback to `extract_text()` for digital text extraction
+4. MD5 deduplication — re-uploading the same statement never creates duplicate transactions
 
 ### Facebook Prophet Forecasting
 - Auto-detects yearly seasonality: enabled only when ≥12 months of data exist
@@ -101,7 +102,7 @@ graph.add_edge("tools", "agent")
 
 ### Prerequisites
 - Docker + Docker Compose
-- Anthropic API key
+- OpenAI API key
 
 ### Run
 
@@ -110,7 +111,7 @@ git clone https://github.com/apuroopy1-prog/fluxfi.git
 cd fluxfi
 
 cp .env.example .env
-# Edit .env — add your ANTHROPIC_API_KEY
+# Edit .env — add your OPENAI_API_KEY
 
 docker compose up -d --build
 ```
@@ -174,7 +175,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 # AI
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ---
@@ -183,15 +184,15 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 | Layer | Technology |
 |---|---|
-| **AI / LLM** | Anthropic Claude Opus 4.6, Claude Sonnet 4.6 |
+| **AI / LLM** | OpenAI GPT-4o-mini |
 | **Agent Framework** | LangGraph (ReAct), LangChain |
 | **Forecasting** | Facebook Prophet |
-| **PDF Extraction** | pdfplumber |
+| **PDF & OCR Extraction** | `pdfplumber`, Tesseract OCR (`pytesseract`, `pdf2image`) |
 | **Backend** | FastAPI, SQLAlchemy, Pydantic, Celery |
 | **Database** | PostgreSQL, Redis |
-| **Frontend** | React 18, Vite, TailwindCSS, Chart.js |
+| **Frontend** | React 18, Vite 5, TailwindCSS 3, Chart.js |
 | **Infrastructure** | Docker Compose, Nginx |
-| **Auth** | JWT (access + refresh tokens) |
+| **Auth** | JWT (access + refresh tokens), Google OAuth2 |
 
 ---
 
